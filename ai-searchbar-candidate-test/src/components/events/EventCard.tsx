@@ -54,6 +54,13 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
             />
           )}
           <div className="absolute top-2 right-2 flex gap-2">
+            {/* Debug: Show relevance score and tier if available */}
+            {(event as any)._relevanceScore !== undefined && (
+              <Badge className="bg-blue-600 text-white font-mono text-xs">
+                Score: {Math.round((event as any)._relevanceScore)}
+                {(event as any)._tier && ` | T${(event as any)._tier}`}
+              </Badge>
+            )}
             {discount > 0 && (
               <Badge className="bg-red-500 text-white">-{discount}%</Badge>
             )}

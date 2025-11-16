@@ -1,5 +1,33 @@
 import { EventWithTickets } from '@/types/event';
 
+// Common/generic words that should have lower weight in scoring
+// These words appear in many titles but don't indicate strong relevance
+const COMMON_WORDS = new Set([
+  'night',
+  'day',
+  'evening',
+  'morning',
+  'afternoon',
+  'show',
+  'event',
+  'experience',
+  'tour',
+  'class',
+  'session',
+  'workshop',
+  'party',
+  'celebration',
+  'new',
+  'special',
+  'great',
+  'best',
+  'top',
+  'annual',
+  'monthly',
+  'weekly',
+  'daily',
+]);
+
 // Synonym map for keyword expansion - matches production
 export const SYNONYM_MAP: Record<string, string[]> = {
   'music': ['concert', 'live', 'band', 'performance', 'show', 'gig', 'festival', 'acoustic', 'jazz', 'rock', 'classical', 'electronic', 'dj', 'singer', 'musician', 'orchestra'],
@@ -43,11 +71,11 @@ export const VENUE_ENTITIES: Record<string, { canonical: string; aliases: string
  */
 export function expandKeywords(keywords: string[]): string[] {
   const expanded = new Set<string>();
-  
+
   keywords.forEach(keyword => {
     const lower = keyword.toLowerCase();
     expanded.add(lower);
-    
+
     // Check synonym map
     Object.entries(SYNONYM_MAP).forEach(([key, synonyms]) => {
       if (lower === key || synonyms.includes(lower)) {
@@ -56,7 +84,7 @@ export function expandKeywords(keywords: string[]): string[] {
       }
     });
   });
-  
+
   return Array.from(expanded);
 }
 
@@ -98,84 +126,96 @@ export function calculateRelevanceScore(
   let score = 0;
   let directMatches = 0;
   let synonymMatches = 0;
-  
+
   const lowerTitle = event.title.toLowerCase();
   const lowerDescription = event.description.toLowerCase();
   const lowerCategory = event.category.toLowerCase();
-  
+
   // Title matches (highest weight)
   originalKeywords.forEach(keyword => {
     const lower = keyword.toLowerCase();
     if (lowerTitle.includes(lower)) {
-      score += 50;
+      // Apply reduced weight to common/generic words
+      const weight = COMMON_WORDS.has(lower) ? 15 : 50; // 0.3x multiplier for common words
+      score += weight;
       directMatches++;
     }
   });
-  
+
   // Expanded keyword title matches
   expandedKeywords.forEach(keyword => {
     if (!originalKeywords.includes(keyword)) {
       if (lowerTitle.includes(keyword)) {
-        score += 15;
+        // Apply reduced weight to common/generic words
+        const weight = COMMON_WORDS.has(keyword) ? 5 : 15; // ~0.33x multiplier for common words
+        score += weight;
         synonymMatches++;
       }
     }
   });
-  
+
   // Venue matching (very high weight)
   const venueScore = calculateVenueScore(event, query);
   score += venueScore;
   if (venueScore > 0) directMatches++;
-  
+
   // Category matches
   originalKeywords.forEach(keyword => {
     const lower = keyword.toLowerCase();
     if (lowerCategory === lower || lowerCategory.includes(lower)) {
-      score += 30;
+      // Apply reduced weight to common/generic words
+      const weight = COMMON_WORDS.has(lower) ? 10 : 30; // ~0.33x multiplier for common words
+      score += weight;
       directMatches++;
     }
   });
-  
+
   // Expanded keyword category matches
   expandedKeywords.forEach(keyword => {
     if (!originalKeywords.includes(keyword)) {
       if (lowerCategory === keyword || lowerCategory.includes(keyword)) {
-        score += 12;
+        // Apply reduced weight to common/generic words
+        const weight = COMMON_WORDS.has(keyword) ? 4 : 12; // ~0.33x multiplier for common words
+        score += weight;
         synonymMatches++;
       }
     }
   });
-  
+
   // Description matches
   originalKeywords.forEach(keyword => {
     const lower = keyword.toLowerCase();
     if (lowerDescription.includes(lower)) {
-      score += 20;
+      // Apply reduced weight to common/generic words
+      const weight = COMMON_WORDS.has(lower) ? 6 : 20; // 0.3x multiplier for common words
+      score += weight;
       directMatches++;
     }
   });
-  
+
   // Expanded keyword description matches
   expandedKeywords.forEach(keyword => {
     if (!originalKeywords.includes(keyword)) {
       if (lowerDescription.includes(keyword)) {
-        score += 8;
+        // Apply reduced weight to common/generic words
+        const weight = COMMON_WORDS.has(keyword) ? 3 : 8; // ~0.375x multiplier for common words
+        score += weight;
         synonymMatches++;
       }
     }
   });
-  
+
   // Source diversity bonus (prefer native events slightly)
   if (event.source_type === 'native') {
     score += 2;
   }
-  
+
   // Availability bonus (events with more tickets)
   const ticketsLeft = event.event_tickets?.[0]?.tickets_left || 0;
   if (ticketsLeft > 0) {
     score += Math.min(ticketsLeft / 10, 5); // Max 5 points
   }
-  
+
   // Recent/soon events get a small boost
   const eventDate = new Date(event.event_date);
   const daysUntil = Math.floor((eventDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -184,12 +224,12 @@ export function calculateRelevanceScore(
   } else if (daysUntil > 7 && daysUntil <= 14) {
     score += 5;
   }
-  
+
   return {
     score,
     matched: directMatches + synonymMatches,
     direct: directMatches,
-    synonym: synonymMatches
+    synonym: synonymMatches,
   };
 }
 
@@ -199,14 +239,14 @@ export function calculateRelevanceScore(
 export function parseTimePreference(query: string): { start?: Date; end?: Date } | null {
   const lower = query.toLowerCase();
   const now = new Date();
-  
+
   // Tonight
   if (lower.includes('tonight') || lower.includes('today')) {
     const endOfDay = new Date(now);
     endOfDay.setHours(23, 59, 59, 999);
     return { start: now, end: endOfDay };
   }
-  
+
   // Tomorrow
   if (lower.includes('tomorrow')) {
     const tomorrow = new Date(now);
@@ -216,7 +256,7 @@ export function parseTimePreference(query: string): { start?: Date; end?: Date }
     endOfTomorrow.setHours(23, 59, 59, 999);
     return { start: tomorrow, end: endOfTomorrow };
   }
-  
+
   // This weekend
   if (lower.includes('weekend') || lower.includes('saturday') || lower.includes('sunday')) {
     const day = now.getDay();
@@ -229,14 +269,14 @@ export function parseTimePreference(query: string): { start?: Date; end?: Date }
     sunday.setHours(23, 59, 59, 999);
     return { start: saturday, end: sunday };
   }
-  
+
   // This week
   if (lower.includes('this week') || lower.includes('week')) {
     const endOfWeek = new Date(now);
     endOfWeek.setDate(endOfWeek.getDate() + 7);
     return { start: now, end: endOfWeek };
   }
-  
+
   return null;
 }
 
@@ -245,19 +285,19 @@ export function parseTimePreference(query: string): { start?: Date; end?: Date }
  */
 export function parsePricePreference(query: string): { min?: number; max?: number } | null {
   const lower = query.toLowerCase();
-  
+
   if (lower.includes('free')) {
     return { min: 0, max: 0 };
   }
-  
+
   if (lower.includes('cheap') || lower.includes('affordable') || lower.includes('budget')) {
     return { min: 0, max: 200 };
   }
-  
+
   if (lower.includes('expensive') || lower.includes('premium') || lower.includes('luxury')) {
     return { min: 300, max: 10000 };
   }
-  
+
   return null;
 }
 
@@ -278,22 +318,22 @@ export function searchEvents(
     .toLowerCase()
     .split(' ')
     .filter(word => word.length > 2);
-  
+
   // Expand keywords using synonyms
   const expandedKeywords = expandKeywords(keywords);
-  
+
   // Auto-detect time and price preferences if not provided
   const timeFilter = options?.timeFilter || parseTimePreference(query);
   const priceFilter = options?.priceRange || parsePricePreference(query);
-  
-  console.log('🔍 Search params:', { 
-    query, 
-    keywords, 
+
+  console.log('🔍 Search params:', {
+    query,
+    keywords,
     expandedCount: expandedKeywords.length,
     timeFilter,
-    priceFilter
+    priceFilter,
   });
-  
+
   // Filter events by time
   let filtered = events;
   if (timeFilter) {
@@ -304,7 +344,7 @@ export function searchEvents(
       return true;
     });
   }
-  
+
   // Filter by price
   if (priceFilter) {
     filtered = filtered.filter(event => {
@@ -313,14 +353,12 @@ export function searchEvents(
       return true;
     });
   }
-  
+
   // Filter by categories
   if (options?.categories && options.categories.length > 0) {
-    filtered = filtered.filter(event => 
-      options.categories!.includes(event.category)
-    );
+    filtered = filtered.filter(event => options.categories!.includes(event.category));
   }
-  
+
   // Calculate relevance scores
   const scored = filtered.map(event => {
     const relevance = calculateRelevanceScore(event, keywords, expandedKeywords, query);
@@ -329,10 +367,10 @@ export function searchEvents(
       _relevanceScore: relevance.score,
       _matched: relevance.matched,
       _direct: relevance.direct,
-      _synonym: relevance.synonym
+      _synonym: relevance.synonym,
     };
   });
-  
+
   // Sort by relevance score
   scored.sort((a, b) => {
     // Primary sort: relevance score
@@ -342,15 +380,57 @@ export function searchEvents(
     // Secondary sort: event date (sooner first)
     return new Date(a.event_date).getTime() - new Date(b.event_date).getTime();
   });
-  
+
+  // Filter out noise (very low scores)
+  const MIN_SCORE = 10;
+  const finalResults = scored.filter(e => e._relevanceScore >= MIN_SCORE);
+
+  // Dynamic tiering: find the largest gap in scores to split tiers
+  if (finalResults.length > 0) {
+    let maxGap = 0;
+    let gapIndex = -1;
+
+    // Look for the largest score gap in the results
+    for (let i = 0; i < Math.min(finalResults.length - 1, 20); i++) {
+      const gap = finalResults[i]._relevanceScore - finalResults[i + 1]._relevanceScore;
+      const percentDrop = gap / finalResults[i]._relevanceScore;
+
+      // Significant gap: >35% drop OR >50 absolute points
+      if ((percentDrop > 0.35 || gap > 50) && gap > maxGap) {
+        maxGap = gap;
+        gapIndex = i;
+      }
+    }
+
+    // Assign tiers based on the gap
+    finalResults.forEach((event, index) => {
+      if (gapIndex === -1 || index <= gapIndex) {
+        (event as any)._tier = 1; // Highly Relevant
+      } else {
+        (event as any)._tier = 2; // Possibly Relevant
+      }
+    });
+
+    console.log('📊 Tiering:', {
+      tier1Count: finalResults.filter(e => (e as any)._tier === 1).length,
+      tier2Count: finalResults.filter(e => (e as any)._tier === 2).length,
+      gapAt: gapIndex >= 0 ? `${finalResults[gapIndex]._relevanceScore} → ${finalResults[gapIndex + 1]._relevanceScore}` : 'none',
+      maxGap,
+    });
+  }
+
   // Log top results for debugging
-  console.log('🎯 Top 5 results:', scored.slice(0, 5).map(e => ({
-    title: e.title,
-    score: e._relevanceScore,
-    matched: e._matched,
-    direct: e._direct,
-    synonym: e._synonym
-  })));
-  
-  return scored;
+  console.log(
+    '🎯 Top 5 results:',
+    finalResults.slice(0, 5).map(e => ({
+      title: e.title,
+      score: e._relevanceScore,
+      tier: (e as any)._tier,
+      matched: e._matched,
+      direct: e._direct,
+      synonym: e._synonym,
+    }))
+  );
+
+  return finalResults;
 }

@@ -16,11 +16,59 @@ export const EventsList: React.FC<EventsListProps> = ({ events }) => {
     );
   }
 
+  // Separate events by tier if they have tier information
+  const tier1Events = events.filter(e => (e as any)._tier === 1);
+  const tier2Events = events.filter(e => (e as any)._tier === 2);
+
+  // If no tiering, show all events normally
+  const hasTiering = tier1Events.length > 0 || tier2Events.length > 0;
+
+  if (!hasTiering) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {events.map((event) => (
+          <EventCard key={event.id} event={event} />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {events.map((event) => (
-        <EventCard key={event.id} event={event} />
-      ))}
+    <div className="space-y-8">
+      {/* Tier 1: Highly Relevant */}
+      {tier1Events.length > 0 && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {tier1Events.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Separator and Tier 2 heading */}
+      {tier2Events.length > 0 && (
+        <>
+          <div className="space-y-4">
+            <div className="border-t border-border my-6" />
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold text-muted-foreground">
+                You might also be interested in...
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                These events are less relevant but may still match your search
+              </p>
+            </div>
+          </div>
+
+          {/* Tier 2: Possibly Relevant */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-75">
+            {tier2Events.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };
