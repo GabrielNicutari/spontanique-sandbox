@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EventWithTickets } from "@/types/event";
 import { format } from "date-fns";
+import { getGradientFromId } from "@/utils/image";
 
 interface EventCardProps {
   event: EventWithTickets;
@@ -26,24 +27,6 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
   const isTomorrow =
     format(eventDate, "yyyy-MM-dd") ===
     format(new Date(Date.now() + 86400000), "yyyy-MM-dd");
-
-  // Generate consistent gradient colors from event ID using hash
-  const getGradientFromId = (id: string): string => {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-      hash = (hash << 5) - hash + id.charCodeAt(i);
-      hash = hash & hash;
-    }
-
-    // Generate HSL colors for nice, vibrant gradients
-    const hue1 = Math.abs(hash % 360);
-    const hue2 = (hue1 + 60) % 360;
-    const saturation = 65;
-    const lightness1 = 55;
-    const lightness2 = 45;
-
-    return `linear-gradient(135deg, hsl(${hue1}, ${saturation}%, ${lightness1}%), hsl(${hue2}, ${saturation}%, ${lightness2}%))`;
-  };
 
   return (
     <motion.div
