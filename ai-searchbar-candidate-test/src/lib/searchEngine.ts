@@ -4,7 +4,7 @@ import { EventWithTickets } from '@/types/event';
 export const SYNONYM_MAP: Record<string, string[]> = {
   'music': ['concert', 'live', 'band', 'performance', 'show', 'gig', 'festival', 'acoustic', 'jazz', 'rock', 'classical', 'electronic', 'dj', 'singer', 'musician', 'orchestra'],
   'yoga': ['pilates', 'meditation', 'mindfulness', 'wellness', 'stretching', 'zen', 'breathwork'],
-  'games': ['gaming', 'quiz', 'trivia', 'board', 'cards', 'tournament', 'competition', 'play', 'e-sports', 'video games'],
+  'games': ['gaming', 'quiz', 'trivia', 'board', 'cards', 'tournament', 'competition', 'play', 'e-sports', 'esports', 'video games', 'videogames', 'video-games', 'boardgame', 'board-game'],
   'food': ['dining', 'restaurant', 'cuisine', 'meal', 'tasting', 'cooking', 'culinary', 'brunch', 'dinner', 'lunch', 'wine', 'beer', 'drinks'],
   'fitness': ['workout', 'gym', 'exercise', 'training', 'crossfit', 'bootcamp', 'sports', 'running', 'cycling'],
   'art': ['exhibition', 'gallery', 'museum', 'painting', 'sculpture', 'photography', 'creative', 'craft'],
@@ -66,19 +66,22 @@ export function expandKeywords(keywords: string[]): string[] {
 function calculateVenueScore(event: EventWithTickets, query: string): number {
   const lowerQuery = query.toLowerCase();
   const lowerVenue = event.venue.toLowerCase();
-  
+
   // Check for exact venue entity match
   for (const [key, entity] of Object.entries(VENUE_ENTITIES)) {
-    if (entity.aliases.some(alias => lowerQuery.includes(alias) || lowerVenue.includes(alias))) {
+    const queryIncludesVenue = entity.aliases.some(alias => lowerQuery.includes(alias));
+    const eventAtThisVenue = entity.aliases.some(alias => lowerVenue.includes(alias));
+
+    if (queryIncludesVenue && eventAtThisVenue) {
       return entity.weight;
     }
   }
-  
-  // Check for partial venue match
-  if (lowerQuery.includes(lowerVenue) || lowerVenue.includes(lowerQuery)) {
+
+  // Check for partial venue match (for non-entity venues)
+  if (lowerQuery.includes(lowerVenue) && lowerVenue.length > 3) {
     return 50;
   }
-  
+
   return 0;
 }
 
