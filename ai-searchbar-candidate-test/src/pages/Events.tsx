@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { AISearchBar } from '@/components/search/AISearchBar';
 import { EventsList } from '@/components/events/EventsList';
 import { CategoryFilter } from '@/components/CategoryFilter';

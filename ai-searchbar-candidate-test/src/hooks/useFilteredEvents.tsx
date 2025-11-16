@@ -4,15 +4,26 @@ import { EventWithTickets } from '@/types/event';
 export const useFilteredEvents = (
   events: EventWithTickets[],
   category: string,
+  location: string,
   priceRange: [number, number],
-  dateFilter: string
+  dateFilter: string,
+  showOnlyPartnerEvents: boolean
 ) => {
   const filteredEvents = useMemo(() => {
     let filtered = [...events];
 
     // Filter by category
-    if (category && category !== 'all') {
+    if (category && category !== 'All') {
       filtered = filtered.filter(event => event.category === category);
+    }
+
+    // Filter by location
+    if (location && location.trim()) {
+      const lowerLocation = location.toLowerCase();
+      filtered = filtered.filter(event =>
+        event.city.toLowerCase().includes(lowerLocation) ||
+        event.venue.toLowerCase().includes(lowerLocation)
+      );
     }
 
     // Filter by price
@@ -21,11 +32,11 @@ export const useFilteredEvents = (
     );
 
     // Filter by date
-    if (dateFilter && dateFilter !== 'all') {
+    if (dateFilter && dateFilter !== '') {
       const now = new Date();
       filtered = filtered.filter(event => {
         const eventDate = new Date(event.event_date);
-        
+
         switch (dateFilter) {
           case 'today':
             return eventDate.toDateString() === now.toDateString();
@@ -46,8 +57,13 @@ export const useFilteredEvents = (
       });
     }
 
-    return filtered;
-  }, [events, category, priceRange, dateFilter]);
+    // Filter by partner events
+    if (showOnlyPartnerEvents) {
+      filtered = filtered.filter(event => event.source_type === 'native');
+    }
 
-  return { filteredEvents };
+    return filtered;
+  }, [events, category, location, priceRange, dateFilter, showOnlyPartnerEvents]);
+
+  return filteredEvents;
 };
