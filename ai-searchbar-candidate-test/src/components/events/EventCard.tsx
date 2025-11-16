@@ -1,24 +1,49 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Clock, MapPin, Tag, Calendar } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { EventWithTickets } from '@/types/event';
-import { format } from 'date-fns';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Clock, MapPin, Tag, Calendar, ImageOff } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { EventWithTickets } from "@/types/event";
+import { format } from "date-fns";
 
 interface EventCardProps {
   event: EventWithTickets;
 }
 
 export const EventCard: React.FC<EventCardProps> = ({ event }) => {
-  const discount = event.original_price 
-    ? Math.round(((event.original_price - event.price) / event.original_price) * 100)
+  const [imageError, setImageError] = useState(false);
+
+  const discount = event.original_price
+    ? Math.round(
+        ((event.original_price - event.price) / event.original_price) * 100
+      )
     : 0;
 
   const ticketsLeft = event.event_tickets?.[0]?.tickets_left || 0;
   const eventDate = new Date(event.event_date);
-  const isToday = format(eventDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-  const isTomorrow = format(eventDate, 'yyyy-MM-dd') === format(new Date(Date.now() + 86400000), 'yyyy-MM-dd');
+  const isToday =
+    format(eventDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+  const isTomorrow =
+    format(eventDate, "yyyy-MM-dd") ===
+    format(new Date(Date.now() + 86400000), "yyyy-MM-dd");
+
+  // Generate consistent gradient colors from event ID using hash
+  const getGradientFromId = (id: string): string => {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash << 5) - hash + id.charCodeAt(i);
+      hash = hash & hash;
+    }
+
+    // Generate HSL colors for nice, vibrant gradients
+    const hue1 = Math.abs(hash % 360);
+    const hue2 = (hue1 + 60) % 360;
+    const saturation = 65;
+    const lightness1 = 55;
+    const lightness2 = 45;
+
+    return `linear-gradient(135deg, hsl(${hue1}, ${saturation}%, ${lightness1}%), hsl(${hue2}, ${saturation}%, ${lightness2}%))`;
+  };
 
   return (
     <motion.div
@@ -29,30 +54,34 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
     >
       <Card className="overflow-hidden h-full hover:shadow-lg transition-shadow">
         <div className="relative h-48 overflow-hidden bg-gray-200">
-          <img
-            src={event.image_url || '/placeholder.svg'}
-            alt={event.title}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = '/placeholder.svg';
-            }}
-          />
+          {imageError || !event.image_url ? (
+            <div
+              className="w-full h-full flex items-center justify-center"
+              style={{ background: getGradientFromId(event.id) }}
+            >
+              <ImageOff className="w-16 h-16 text-white/40 drop-shadow-lg" />
+            </div>
+          ) : (
+            <img
+              src={event.image_url}
+              alt={event.title}
+              className="w-full h-full object-cover"
+              onError={() => setImageError(true)}
+              loading="lazy"
+            />
+          )}
           <div className="absolute top-2 right-2 flex gap-2">
             {discount > 0 && (
-              <Badge className="bg-red-500 text-white">
-                -{discount}%
-              </Badge>
+              <Badge className="bg-red-500 text-white">-{discount}%</Badge>
             )}
-            {event.source_type === 'external' && (
-              <Badge variant="secondary">
-                {event.source_platform}
-              </Badge>
+            {event.source_type === "external" && (
+              <Badge className="bg-secondary text-secondary-foreground">{event.source_platform}</Badge>
             )}
           </div>
           {(isToday || isTomorrow) && (
             <div className="absolute top-2 left-2">
               <Badge className="bg-primary text-primary-foreground">
-                {isToday ? 'Today' : 'Tomorrow'}
+                {isToday ? "Today" : "Tomorrow"}
               </Badge>
             </div>
           )}
@@ -73,18 +102,22 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="w-4 h-4" />
-              <span className="line-clamp-1">{event.venue}, {event.city}</span>
+              <span className="line-clamp-1">
+                {event.venue}, {event.city}
+              </span>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="w-4 h-4" />
-              <span>{format(eventDate, 'MMM d, yyyy • h:mm a')}</span>
+              <span>{format(eventDate, "MMM d, yyyy • h:mm a")}</span>
             </div>
 
             {ticketsLeft > 0 && ticketsLeft <= 10 && (
               <div className="flex items-center gap-2 text-sm text-orange-600">
                 <Clock className="w-4 h-4" />
-                <span className="font-medium">Only {ticketsLeft} tickets left!</span>
+                <span className="font-medium">
+                  Only {ticketsLeft} tickets left!
+                </span>
               </div>
             )}
           </div>
@@ -93,7 +126,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="text-2xl font-bold text-primary">
-                  {event.price === 0 ? 'Free' : `${event.price} DKK`}
+                  {event.price === 0 ? "Free" : `${event.price} DKK`}
                 </span>
                 {event.original_price && event.original_price > event.price && (
                   <span className="text-sm text-muted-foreground line-through">
