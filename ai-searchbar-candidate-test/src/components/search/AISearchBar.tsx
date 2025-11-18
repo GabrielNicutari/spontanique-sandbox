@@ -39,30 +39,29 @@ export const AISearchBar = ({
     setPrompt(initialPrompt || '');
   }, [initialPrompt]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim() || isAnalyzing) return;
+  const performSearch = async (searchPrompt: string) => {
+    if (!searchPrompt.trim() || isAnalyzing) return;
 
-    console.log('Starting AI search with prompt:', prompt);
+    console.log('Starting AI search with prompt:', searchPrompt);
     setIsSearching(true);
-    
+
     try {
-      const result = await analyzePrompt(prompt);
+      const result = await analyzePrompt(searchPrompt);
       if (result) {
         console.log('✅ AI search successful:', result);
-        
+
         // Show smart feedback based on search results
         let feedbackMessage = result.explanation;
         if (result.totalFound === 0) {
-          feedbackMessage = `No events found for "${prompt}". Try adjusting your search or check back later!`;
+          feedbackMessage = `No events found for "${searchPrompt}". Try adjusting your search or check back later!`;
         } else if (result.totalFound > 0 && result.totalFound <= 3) {
-          feedbackMessage = `Found ${result.totalFound} perfect match${result.totalFound > 1 ? 'es' : ''} for "${prompt}"`;
+          feedbackMessage = `Found ${result.totalFound} perfect match${result.totalFound > 1 ? 'es' : ''} for "${searchPrompt}"`;
         } else if (result.totalFound > 20) {
           feedbackMessage = `Found ${result.totalFound} events! Showing the most relevant ones first.`;
         }
-        
+
         setLastExplanation(feedbackMessage);
-        
+
         onAISearch({
           categories: result.categories,
           priceRange: [result.price_range.min, result.price_range.max],
@@ -70,7 +69,7 @@ export const AISearchBar = ({
           mood: result.mood,
           explanation: result.explanation,
           searchKeywords: result.keywords.join(' '),
-          prompt: prompt,
+          prompt: searchPrompt,
           location: result.location,
           events: result.events,
           totalFound: result.totalFound
@@ -83,6 +82,11 @@ export const AISearchBar = ({
       console.error('AI search error:', error);
       setIsSearching(false);
     }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await performSearch(prompt);
   };
 
   const handleClear = () => {
@@ -189,7 +193,10 @@ export const AISearchBar = ({
                 <Badge
                   variant="outline"
                   className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors px-3 py-2 text-xs justify-center text-center w-full"
-                  onClick={() => setPrompt(example)}
+                  onClick={() => {
+                    setPrompt(example);
+                    performSearch(example);
+                  }}
                 >
                   {example}
                 </Badge>
