@@ -22,3 +22,17 @@
 
 - Something like "Jazz music tonight" is a bit too specific for the current mock data, as there are no events that exactly match that query. However, the search does return jazz-related events, which is good. In a real-world scenario, we might want to implement some form of fuzzy matching or partial matching to handle such cases better. 
    - Additionally, we could consider implementing a fallback mechanism that suggests related events or categories when no exact matches are found. This would help ensure that users still find relevant content even if their initial query doesn't yield direct results.
+
+
+==== Iteration 3 Notes  ====
+
+(General thoughts, a bit beyond the scope of the test):
+
+- Potential avenues for improvement for the search bar, in general, irrespective of AI usage: 
+  - Autocomplete suggestions as the user types, to help guide their queries and improve search accuracy. (NECESSARY for mobile, for web.. depends)
+  - (Somewhat mentioned already) Smart relevance.
+- It's good that the platform already has placeholder text and "chips" to showcase the search bar has more advanced AI capabilities.
+  - We could also show what the AI understood from the query, e.g., "Searching for events related to 'rock concerts' happening this weekend in London", to reassure users that the AI is processing their intent correctly. Transparency and interpretability are important.
+- We need to make sure traditional keyword search still works well, as not all users will want to use AI-powered search. Some users might prefer the simplicity and control of traditional search methods.
+- Very far along the line, and probably tricky to implement, but we could use each user's context and preferences to personalize search results. This could involve learning from their past searches, event attendance, and interactions on the platform to tailor results to their interests. (Won't work before we have user accounts and history tracking, though.) (Shouldn't be a priority, though, but worth keeping in mind for the future.)
+- We also need to think if we prefer infinite scrolling or pagination for search results. Each has its pros and cons, and the choice might depend on the typical user behavior on the platform. For this test, infinite scrolling is fine.

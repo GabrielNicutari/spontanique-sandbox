@@ -26,7 +26,7 @@ export const EventsList: React.FC<EventsListProps> = ({ events }) => {
   if (!hasTiering) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((event) => (
+        {events.map(event => (
           <EventCard key={event.id} event={event} />
         ))}
       </div>
@@ -35,39 +35,44 @@ export const EventsList: React.FC<EventsListProps> = ({ events }) => {
 
   return (
     <div className="space-y-8">
+      {/* Show message if only low-scoring results */}
+      {tier1Events.length === 0 && tier2Events.length > 0 && (
+        <div className="bg-muted/50 border border-border rounded-lg p-4 text-center">
+          <p className="text-sm text-muted-foreground">No highly relevant results found. Showing possible matches that may be of interest:</p>
+        </div>
+      )}
+
       {/* Tier 1: Highly Relevant */}
       {tier1Events.length > 0 && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tier1Events.map((event) => (
+            {tier1Events.map(event => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Separator and Tier 2 heading */}
-      {tier2Events.length > 0 && (
+      {/* Separator and Tier 2 heading (only if there are Tier 1 results too) */}
+      {tier1Events.length > 0 && tier2Events.length > 0 && (
         <>
           <div className="space-y-4">
             <div className="border-t border-border my-6" />
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold text-muted-foreground">
-                You might also be interested in...
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                These events are less relevant but may still match your search
-              </p>
+              <h3 className="text-xl font-semibold text-muted-foreground">You might also be interested in...</h3>
+              <p className="text-sm text-muted-foreground">These events do not match your search directly but may still be of interest</p>
             </div>
           </div>
-
-          {/* Tier 2: Possibly Relevant */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-75">
-            {tier2Events.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
         </>
+      )}
+
+      {/* Tier 2: Possibly Relevant */}
+      {tier2Events.length > 0 && (
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${tier1Events.length > 0 ? 'opacity-75' : ''}`}>
+          {tier2Events.map(event => (
+            <EventCard key={event.id} event={event} />
+          ))}
+        </div>
       )}
     </div>
   );

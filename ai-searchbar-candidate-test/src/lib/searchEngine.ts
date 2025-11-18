@@ -387,29 +387,38 @@ export function searchEvents(
 
   // Dynamic tiering: find the largest gap in scores to split tiers
   if (finalResults.length > 0) {
+    const MIN_TIER1_SCORE = 40;
+    const topScore = finalResults[0]._relevanceScore;
     let maxGap = 0;
     let gapIndex = -1;
 
-    // Look for the largest score gap in the results
-    for (let i = 0; i < Math.min(finalResults.length - 1, 20); i++) {
-      const gap = finalResults[i]._relevanceScore - finalResults[i + 1]._relevanceScore;
-      const percentDrop = gap / finalResults[i]._relevanceScore;
+    // If the top result is below threshold, everything goes to Tier 2
+    if (topScore < MIN_TIER1_SCORE) {
+      finalResults.forEach(event => {
+        (event as any)._tier = 2; // All results are "Possibly Relevant"
+      });
+    } else {
+      // Look for the largest score gap in the results
+      for (let i = 0; i < Math.min(finalResults.length - 1, 20); i++) {
+        const gap = finalResults[i]._relevanceScore - finalResults[i + 1]._relevanceScore;
+        const percentDrop = gap / finalResults[i]._relevanceScore;
 
-      // Significant gap: >35% drop OR >50 absolute points
-      if ((percentDrop > 0.35 || gap > 50) && gap > maxGap) {
-        maxGap = gap;
-        gapIndex = i;
+        // Significant gap: >35% drop OR >50 absolute points
+        if ((percentDrop > 0.35 || gap > 50) && gap > maxGap) {
+          maxGap = gap;
+          gapIndex = i;
+        }
       }
+
+      // Assign tiers based on the gap
+      finalResults.forEach((event, index) => {
+        if (gapIndex === -1 || index <= gapIndex) {
+          (event as any)._tier = 1; // Highly Relevant
+        } else {
+          (event as any)._tier = 2; // Possibly Relevant
+        }
+      });
     }
-
-    // Assign tiers based on the gap
-    finalResults.forEach((event, index) => {
-      if (gapIndex === -1 || index <= gapIndex) {
-        (event as any)._tier = 1; // Highly Relevant
-      } else {
-        (event as any)._tier = 2; // Possibly Relevant
-      }
-    });
 
     console.log('📊 Tiering:', {
       tier1Count: finalResults.filter(e => (e as any)._tier === 1).length,
