@@ -38,13 +38,20 @@ export const EventsList: React.FC<EventsListProps> = ({ events }) => {
       {/* Show message if only low-scoring results */}
       {tier1Events.length === 0 && tier2Events.length > 0 && (
         <div className="bg-muted/50 border border-border rounded-lg p-4 text-center">
-          <p className="text-sm text-muted-foreground">No highly relevant results found. Showing possible matches that may be of interest:</p>
+          <p className="text-sm text-muted-foreground">
+            No highly relevant results found. Showing {tier2Events.length} possible match{tier2Events.length !== 1 ? 'es' : ''} that may be of interest:
+          </p>
         </div>
       )}
 
       {/* Tier 1: Highly Relevant */}
       {tier1Events.length > 0 && (
         <div className="space-y-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-foreground">
+              {tier1Events.length} Highly Relevant {tier1Events.length !== 1 ? 'Results' : 'Result'}
+            </h3>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tier1Events.map(event => (
               <EventCard key={event.id} event={event} />
@@ -59,7 +66,9 @@ export const EventsList: React.FC<EventsListProps> = ({ events }) => {
           <div className="space-y-4">
             <div className="border-t border-border my-6" />
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold text-muted-foreground">You might also be interested in...</h3>
+              <h3 className="text-xl font-semibold text-muted-foreground">
+                You might also be interested in... ({tier2Events.length} {tier2Events.length !== 1 ? 'results' : 'result'})
+              </h3>
               <p className="text-sm text-muted-foreground">These events do not match your search directly but may still be of interest</p>
             </div>
           </div>
