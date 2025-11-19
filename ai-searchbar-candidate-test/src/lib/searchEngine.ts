@@ -1,5 +1,32 @@
 import { EventWithTickets } from '@/types/event';
 
+// Time-based words that should NOT contribute to relevance scoring
+// These are filtering criteria (when/where), not content keywords (what)
+const TIME_WORDS = new Set([
+  'tonight',
+  'today',
+  'tomorrow',
+  'yesterday',
+  'weekend',
+  'weekday',
+  'week',
+  'month',
+  'year',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+  'this',
+  'next',
+  'last',
+  'now',
+  'soon',
+  'later',
+]);
+
 // Common/generic words that should have lower weight in scoring
 // These words appear in many titles but don't indicate strong relevance
 const COMMON_WORDS = new Set([
@@ -131,9 +158,17 @@ export function calculateRelevanceScore(
   const lowerDescription = event.description.toLowerCase();
   const lowerCategory = event.category.toLowerCase();
 
+  // Check if ALL keywords are time words (e.g., query is just "tomorrow")
+  // In this case, we don't skip time words in scoring
+  const hasNonTimeKeywords = originalKeywords.some(k => !TIME_WORDS.has(k.toLowerCase()));
+
   // Title matches (highest weight)
   originalKeywords.forEach(keyword => {
     const lower = keyword.toLowerCase();
+
+    // Skip time-based words ONLY if there are other content keywords
+    if (hasNonTimeKeywords && TIME_WORDS.has(lower)) return;
+
     if (lowerTitle.includes(lower)) {
       // Apply reduced weight to common/generic words
       const weight = COMMON_WORDS.has(lower) ? 15 : 50; // 0.3x multiplier for common words
@@ -145,6 +180,9 @@ export function calculateRelevanceScore(
   // Expanded keyword title matches (reduced weight to prevent over-matching)
   expandedKeywords.forEach(keyword => {
     if (!originalKeywords.includes(keyword)) {
+      // Skip time-based words ONLY if there are other content keywords
+      if (hasNonTimeKeywords && TIME_WORDS.has(keyword)) return;
+
       if (lowerTitle.includes(keyword)) {
         // Reduced weight: synonyms should contribute less than direct matches
         const weight = COMMON_WORDS.has(keyword) ? 2 : 5;
@@ -162,6 +200,10 @@ export function calculateRelevanceScore(
   // Category matches
   originalKeywords.forEach(keyword => {
     const lower = keyword.toLowerCase();
+
+    // Skip time-based words ONLY if there are other content keywords
+    if (hasNonTimeKeywords && TIME_WORDS.has(lower)) return;
+
     if (lowerCategory === lower || lowerCategory.includes(lower)) {
       // Apply reduced weight to common/generic words
       const weight = COMMON_WORDS.has(lower) ? 10 : 30; // ~0.33x multiplier for common words
@@ -173,6 +215,9 @@ export function calculateRelevanceScore(
   // Expanded keyword category matches (reduced weight)
   expandedKeywords.forEach(keyword => {
     if (!originalKeywords.includes(keyword)) {
+      // Skip time-based words ONLY if there are other content keywords
+      if (hasNonTimeKeywords && TIME_WORDS.has(keyword)) return;
+
       if (lowerCategory === keyword || lowerCategory.includes(keyword)) {
         // Reduced weight: synonyms should contribute less
         const weight = COMMON_WORDS.has(keyword) ? 2 : 6;
@@ -185,6 +230,10 @@ export function calculateRelevanceScore(
   // Description matches
   originalKeywords.forEach(keyword => {
     const lower = keyword.toLowerCase();
+
+    // Skip time-based words ONLY if there are other content keywords
+    if (hasNonTimeKeywords && TIME_WORDS.has(lower)) return;
+
     if (lowerDescription.includes(lower)) {
       // Apply reduced weight to common/generic words
       const weight = COMMON_WORDS.has(lower) ? 6 : 20; // 0.3x multiplier for common words
@@ -196,6 +245,9 @@ export function calculateRelevanceScore(
   // Expanded keyword description matches (reduced weight)
   expandedKeywords.forEach(keyword => {
     if (!originalKeywords.includes(keyword)) {
+      // Skip time-based words ONLY if there are other content keywords
+      if (hasNonTimeKeywords && TIME_WORDS.has(keyword)) return;
+
       if (lowerDescription.includes(keyword)) {
         // Reduced weight: synonyms should contribute less
         const weight = COMMON_WORDS.has(keyword) ? 1 : 3;
@@ -211,12 +263,16 @@ export function calculateRelevanceScore(
     // If we have direct keyword matches, check if category aligns
     const hasCategoryAlignment = originalKeywords.some(keyword => {
       const lower = keyword.toLowerCase();
+
+      // Skip time-based words for category alignment ONLY if there are other content keywords
+      if (hasNonTimeKeywords && TIME_WORDS.has(lower)) return false;
+
       // Check if category matches or is semantically related
-      return lowerCategory === lower || 
-             lowerTitle.includes(lower) || 
+      return lowerCategory === lower ||
+             lowerTitle.includes(lower) ||
              lowerDescription.includes(lower);
     });
-    
+
     if (hasCategoryAlignment && directMatches >= 2) {
       score += 25; // Strong category alignment bonus
     } else if (hasCategoryAlignment) {
@@ -467,8 +523,17 @@ export function searchEvents(
     const MIN_TIER1_SCORE = 40;
     const topScore = finalResults[0]._relevanceScore;
 
+    // Check if ALL keywords are time-based (e.g., query is just "tomorrow" or "this weekend")
+    const hasNonTimeKeywords = keywords.some(k => !TIME_WORDS.has(k.toLowerCase()));
+
+    // For time-only queries, all results are equally relevant - mark all as Tier 1
+    if (!hasNonTimeKeywords) {
+      finalResults.forEach(event => {
+        (event as any)._tier = 1; // All results are "Highly Relevant" for time queries
+      });
+    }
     // If the top result is below threshold, everything goes to Tier 2
-    if (topScore < MIN_TIER1_SCORE) {
+    else if (topScore < MIN_TIER1_SCORE) {
       finalResults.forEach(event => {
         (event as any)._tier = 2; // All results are "Possibly Relevant"
       });
@@ -519,6 +584,7 @@ export function searchEvents(
       tier2Count: finalResults.filter(e => (e as any)._tier === 2).length,
       topScore,
       tier1Threshold: topScore * 0.70,
+      queryType: !hasNonTimeKeywords ? 'time-only' : 'content-based',
     });
   }
 
