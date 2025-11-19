@@ -142,12 +142,12 @@ export function calculateRelevanceScore(
     }
   });
 
-  // Expanded keyword title matches
+  // Expanded keyword title matches (reduced weight to prevent over-matching)
   expandedKeywords.forEach(keyword => {
     if (!originalKeywords.includes(keyword)) {
       if (lowerTitle.includes(keyword)) {
-        // Apply reduced weight to common/generic words
-        const weight = COMMON_WORDS.has(keyword) ? 5 : 15; // ~0.33x multiplier for common words
+        // Reduced weight: synonyms should contribute less than direct matches
+        const weight = COMMON_WORDS.has(keyword) ? 2 : 5;
         score += weight;
         synonymMatches++;
       }
@@ -170,12 +170,12 @@ export function calculateRelevanceScore(
     }
   });
 
-  // Expanded keyword category matches
+  // Expanded keyword category matches (reduced weight)
   expandedKeywords.forEach(keyword => {
     if (!originalKeywords.includes(keyword)) {
       if (lowerCategory === keyword || lowerCategory.includes(keyword)) {
-        // Apply reduced weight to common/generic words
-        const weight = COMMON_WORDS.has(keyword) ? 4 : 12; // ~0.33x multiplier for common words
+        // Reduced weight: synonyms should contribute less
+        const weight = COMMON_WORDS.has(keyword) ? 2 : 6;
         score += weight;
         synonymMatches++;
       }
@@ -193,17 +193,36 @@ export function calculateRelevanceScore(
     }
   });
 
-  // Expanded keyword description matches
+  // Expanded keyword description matches (reduced weight)
   expandedKeywords.forEach(keyword => {
     if (!originalKeywords.includes(keyword)) {
       if (lowerDescription.includes(keyword)) {
-        // Apply reduced weight to common/generic words
-        const weight = COMMON_WORDS.has(keyword) ? 3 : 8; // ~0.375x multiplier for common words
+        // Reduced weight: synonyms should contribute less
+        const weight = COMMON_WORDS.has(keyword) ? 1 : 3;
         score += weight;
         synonymMatches++;
       }
     }
   });
+
+  // Category alignment bonus: boost events where category matches query intent
+  // This helps differentiate truly relevant results from tangentially related ones
+  if (directMatches > 0) {
+    // If we have direct keyword matches, check if category aligns
+    const hasCategoryAlignment = originalKeywords.some(keyword => {
+      const lower = keyword.toLowerCase();
+      // Check if category matches or is semantically related
+      return lowerCategory === lower || 
+             lowerTitle.includes(lower) || 
+             lowerDescription.includes(lower);
+    });
+    
+    if (hasCategoryAlignment && directMatches >= 2) {
+      score += 25; // Strong category alignment bonus
+    } else if (hasCategoryAlignment) {
+      score += 15; // Moderate category alignment bonus
+    }
+  }
 
   // Source diversity bonus (prefer native events slightly)
   if (event.source_type === 'native') {
@@ -443,12 +462,10 @@ export function searchEvents(
   const MIN_SCORE = 10;
   const finalResults = scored.filter(e => e._relevanceScore >= MIN_SCORE);
 
-  // Dynamic tiering: find the largest gap in scores to split tiers
+  // Dynamic tiering based on relative score threshold
   if (finalResults.length > 0) {
     const MIN_TIER1_SCORE = 40;
     const topScore = finalResults[0]._relevanceScore;
-    let maxGap = 0;
-    let gapIndex = -1;
 
     // If the top result is below threshold, everything goes to Tier 2
     if (topScore < MIN_TIER1_SCORE) {
@@ -456,33 +473,52 @@ export function searchEvents(
         (event as any)._tier = 2; // All results are "Possibly Relevant"
       });
     } else {
-      // Look for the largest score gap in the results
-      for (let i = 0; i < Math.min(finalResults.length - 1, 20); i++) {
-        const gap = finalResults[i]._relevanceScore - finalResults[i + 1]._relevanceScore;
-        const percentDrop = gap / finalResults[i]._relevanceScore;
+      // Check if this is a category-level query
+      // E.g., "music", "sports", "food" - single word that DIRECTLY matches a category
+      const isCategoryQuery = keywords.length === 1 && keywords[0].length <= 12;
+      const queryKeyword = keywords[0]?.toLowerCase();
 
-        // Significant gap: >35% drop OR >50 absolute points
-        if ((percentDrop > 0.35 || gap > 50) && gap > maxGap) {
-          maxGap = gap;
-          gapIndex = i;
+      // Extract unique categories from all events (dynamic)
+      const uniqueCategories = [...new Set(events.map(e => e.category.toLowerCase()))];
+
+      // Find if query DIRECTLY matches a category (not via synonyms)
+      const matchedCategories: string[] = [];
+      if (isCategoryQuery && queryKeyword) {
+        if (uniqueCategories.includes(queryKeyword)) {
+          matchedCategories.push(queryKeyword);
         }
       }
 
-      // Assign tiers based on the gap
-      finalResults.forEach((event, index) => {
-        if (gapIndex === -1 || index <= gapIndex) {
-          (event as any)._tier = 1; // Highly Relevant
-        } else {
-          (event as any)._tier = 2; // Possibly Relevant
-        }
-      });
+      // Apply category-aware tiering or standard tiering
+      if (matchedCategories.length > 0) {
+        // Category query: ALL events in matched categories go to Tier 1
+        finalResults.forEach(event => {
+          const eventCategory = event.category.toLowerCase();
+          if (matchedCategories.includes(eventCategory)) {
+            (event as any)._tier = 1; // All category matches are Highly Relevant
+          } else {
+            (event as any)._tier = 2; // Other events are Possibly Relevant
+          }
+        });
+      } else {
+        // Standard tiering: use 70% threshold (more selective)
+        const tier1Threshold = topScore * 0.70;
+
+        finalResults.forEach(event => {
+          if (event._relevanceScore >= tier1Threshold) {
+            (event as any)._tier = 1; // Highly Relevant
+          } else {
+            (event as any)._tier = 2; // Possibly Relevant
+          }
+        });
+      }
     }
 
     console.log('📊 Tiering:', {
       tier1Count: finalResults.filter(e => (e as any)._tier === 1).length,
       tier2Count: finalResults.filter(e => (e as any)._tier === 2).length,
-      gapAt: gapIndex >= 0 ? `${finalResults[gapIndex]._relevanceScore} → ${finalResults[gapIndex + 1]._relevanceScore}` : 'none',
-      maxGap,
+      topScore,
+      tier1Threshold: topScore * 0.70,
     });
   }
 

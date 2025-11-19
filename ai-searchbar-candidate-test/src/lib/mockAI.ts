@@ -1,5 +1,5 @@
 import { AISearchResult } from '@/types/event';
-import { searchEvents, SYNONYM_MAP } from './searchEngine';
+import { searchEvents } from './searchEngine';
 import { mockEvents } from './mockData';
 
 /**
@@ -13,14 +13,8 @@ export async function analyzeMockPrompt(prompt: string): Promise<AISearchResult>
   const lower = prompt.toLowerCase();
   const keywords = lower.split(' ').filter(word => word.length > 2);
   
-  // Extract categories
+  // Category filtering disabled - let the search engine handle relevance through keyword scoring
   const categories: string[] = [];
-  const categoryKeywords = ['music', 'culture', 'food', 'fitness', 'business', 'entertainment', 'social', 'sports', 'nightlife'];
-  categoryKeywords.forEach(cat => {
-    if (lower.includes(cat) || SYNONYM_MAP[cat]?.some(syn => lower.includes(syn))) {
-      categories.push(cat);
-    }
-  });
   
   // Extract price preferences
   let priceRange = { min: 0, max: 10000 };
@@ -46,7 +40,6 @@ export async function analyzeMockPrompt(prompt: string): Promise<AISearchResult>
   
   // Perform search
   const searchResults = searchEvents(mockEvents, prompt, {
-    categories: categories.length > 0 ? categories : undefined,
     priceRange: priceRange.max < 10000 ? priceRange : undefined,
   });
   

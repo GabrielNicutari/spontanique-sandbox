@@ -43,3 +43,9 @@
 
 - Clicking on the example chips currently populates the search bar but does not trigger the search automatically. It would be more user-friendly if clicking a chip would immediately perform the search, reducing the number of clicks required from the user. Peronally, I think it's more intuitive since the user is explicitly indicating interest in that query and they appear to be "call-to-action" elements.
 
+==== Iteration 4 Notes ====
+
+- Changed tiering logic from gap-based to relative threshold-based. This should make the tiering more consistent. It still won't be perfect until we have a clear and consistent scoring system and actual AI usage, however.
+- Removed category filtering for now, as it created issues with examples like "e-sports" which matched on "sports" but not "e-sports".
+- Improved scoring logic to better handle common words and synonyms. There was a bit too much "synonym pollution" in the results, which made the tiering less effective.
+  - Also made the search engine a bit more query-aware: broader queries will yield broader results, while more specific queries will yield more focused results (e.g. "music" vs "jazz music tonight").
