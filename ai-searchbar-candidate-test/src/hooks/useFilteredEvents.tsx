@@ -37,6 +37,14 @@ export const useFilteredEvents = (
       filtered = filtered.filter(event => {
         const eventDate = new Date(event.event_date);
 
+        // Check if dateFilter is a keyword or an actual date string
+        if (dateFilter.includes('-')) {
+          // It's a date string like "2025-11-20"
+          const selectedDate = new Date(dateFilter);
+          return eventDate.toDateString() === selectedDate.toDateString();
+        }
+
+        // Otherwise it's a keyword like 'today', 'tomorrow', etc.
         switch (dateFilter) {
           case 'today':
             return eventDate.toDateString() === now.toDateString();
