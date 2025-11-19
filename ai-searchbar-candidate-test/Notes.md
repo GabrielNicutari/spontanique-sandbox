@@ -36,6 +36,7 @@
 - We need to make sure traditional keyword search still works well, as not all users will want to use AI-powered search. Some users might prefer the simplicity and control of traditional search methods.
 - Very far along the line, and probably tricky to implement, but we could use each user's context and preferences to personalize search results. This could involve learning from their past searches, event attendance, and interactions on the platform to tailor results to their interests. (Won't work before we have user accounts and history tracking, though.) (Shouldn't be a priority, though, but worth keeping in mind for the future.)
 - We also need to think if we prefer infinite scrolling or pagination for search results. Each has its pros and cons, and the choice might depend on the typical user behavior on the platform. For this test, infinite scrolling is fine.
+- Caching results (for performance and cost efficiency).
 
 
 (Back to the test specifically):

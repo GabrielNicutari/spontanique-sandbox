@@ -302,6 +302,49 @@ export function parsePricePreference(query: string): { min?: number; max?: numbe
 }
 
 /**
+ * Parse negative keywords from query using natural language patterns
+ */
+function parseNegativeKeywords(query: string): { positiveKeywords: string[]; negativeKeywords: string[] } {
+  const lower = query.toLowerCase();
+  const words = lower.split(/\s+/);
+  const negativeKeywords: string[] = [];
+  const positiveKeywords: string[] = [];
+
+  // Negative keyword patterns
+  const negativePatterns = [
+    'not',
+    'without',
+    'excluding',
+    'except',
+    'exclude',
+    'minus',
+    'no'
+  ];
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+
+    // Check if this word is a negative keyword indicator
+    if (negativePatterns.includes(word) && i + 1 < words.length) {
+      // Next word is the negative keyword
+      const negKeyword = words[i + 1];
+      if (negKeyword.length > 2) {
+        negativeKeywords.push(negKeyword);
+        i++; // Skip the next word since we've processed it
+        continue;
+      }
+    }
+
+    // Regular positive keyword
+    if (word.length > 2 && !negativePatterns.includes(word)) {
+      positiveKeywords.push(word);
+    }
+  }
+
+  return { positiveKeywords, negativeKeywords };
+}
+
+/**
  * Main search function - matches production logic
  */
 export function searchEvents(
@@ -313,11 +356,9 @@ export function searchEvents(
     timeFilter?: { start?: Date; end?: Date };
   }
 ): EventWithTickets[] {
-  // Extract keywords from query
-  const keywords = query
-    .toLowerCase()
-    .split(' ')
-    .filter(word => word.length > 2);
+  // Parse keywords and negative keywords from query
+  const { positiveKeywords, negativeKeywords } = parseNegativeKeywords(query);
+  const keywords = positiveKeywords;
 
   // Expand keywords using synonyms
   const expandedKeywords = expandKeywords(keywords);
@@ -329,6 +370,7 @@ export function searchEvents(
   console.log('🔍 Search params:', {
     query,
     keywords,
+    negativeKeywords,
     expandedCount: expandedKeywords.length,
     timeFilter,
     priceFilter,
@@ -357,6 +399,22 @@ export function searchEvents(
   // Filter by categories
   if (options?.categories && options.categories.length > 0) {
     filtered = filtered.filter(event => options.categories!.includes(event.category));
+  }
+
+  // Filter out events matching negative keywords
+  if (negativeKeywords.length > 0) {
+    filtered = filtered.filter(event => {
+      const lowerTitle = event.title.toLowerCase();
+      const lowerDescription = event.description.toLowerCase();
+      const lowerCategory = event.category.toLowerCase();
+
+      // Exclude event if ANY negative keyword matches
+      return !negativeKeywords.some(negKeyword => {
+        return lowerTitle.includes(negKeyword) || 
+               lowerDescription.includes(negKeyword) || 
+               lowerCategory.includes(negKeyword);
+      });
+    });
   }
 
   // Calculate relevance scores
