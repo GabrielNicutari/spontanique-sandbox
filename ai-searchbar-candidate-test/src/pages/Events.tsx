@@ -44,8 +44,6 @@ const Events = () => {
     events?: EventWithTickets[];
     totalFound?: number;
   }) => {
-    console.log('AI Search filters received:', filters);
-    
     // If clearing search
     if (filters.timePreference === 'clear') {
       setIsAiSearchActive(false);

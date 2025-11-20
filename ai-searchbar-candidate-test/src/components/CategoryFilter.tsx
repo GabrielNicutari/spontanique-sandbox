@@ -1,4 +1,3 @@
-import React from "react";
 import { CategorySelect } from "./filters/CategorySelect";
 import { PriceFilter } from "./filters/PriceFilter";
 import { DateFilter } from "./filters/DateFilter";
@@ -44,13 +43,14 @@ export const CategoryFilter = ({
   };
 
   // Check if any filters are active (different from default values)
-  const hasActiveFilters = 
+  const hasActiveFilters = Boolean(
     selected !== "All" ||
     priceRange[0] !== 0 ||
     priceRange[1] !== 2000 ||
     selectedDate !== "" ||
     showOnlyPartnerEvents ||
-    (searchLocation && searchLocation.trim() !== "");
+    (searchLocation && searchLocation.trim() !== "")
+  );
 
   return (
     <div className="space-y-6">

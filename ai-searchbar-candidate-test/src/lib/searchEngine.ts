@@ -123,7 +123,7 @@ function calculateVenueScore(event: EventWithTickets, query: string): number {
   const lowerVenue = event.venue.toLowerCase();
 
   // Check for exact venue entity match
-  for (const [key, entity] of Object.entries(VENUE_ENTITIES)) {
+  for (const [, entity] of Object.entries(VENUE_ENTITIES)) {
     const queryIncludesVenue = entity.aliases.some(alias => lowerQuery.includes(alias));
     const eventAtThisVenue = entity.aliases.some(alias => lowerVenue.includes(alias));
 
@@ -442,15 +442,6 @@ export function searchEvents(
   const timeFilter = options?.timeFilter || parseTimePreference(query);
   const priceFilter = options?.priceRange || parsePricePreference(query);
 
-  console.log('🔍 Search params:', {
-    query,
-    keywords,
-    negativeKeywords,
-    expandedCount: expandedKeywords.length,
-    timeFilter,
-    priceFilter,
-  });
-
   // Filter events by time
   let filtered = events;
   if (timeFilter) {
@@ -578,28 +569,7 @@ export function searchEvents(
         });
       }
     }
-
-    console.log('📊 Tiering:', {
-      tier1Count: finalResults.filter(e => (e as any)._tier === 1).length,
-      tier2Count: finalResults.filter(e => (e as any)._tier === 2).length,
-      topScore,
-      tier1Threshold: topScore * 0.70,
-      queryType: !hasNonTimeKeywords ? 'time-only' : 'content-based',
-    });
   }
-
-  // Log top results for debugging
-  console.log(
-    '🎯 Top 5 results:',
-    finalResults.slice(0, 5).map(e => ({
-      title: e.title,
-      score: e._relevanceScore,
-      tier: (e as any)._tier,
-      matched: e._matched,
-      direct: e._direct,
-      synonym: e._synonym,
-    }))
-  );
 
   return finalResults;
 }

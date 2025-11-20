@@ -42,14 +42,11 @@ export const AISearchBar = ({
   const performSearch = async (searchPrompt: string) => {
     if (!searchPrompt.trim() || isAnalyzing) return;
 
-    console.log('Starting AI search with prompt:', searchPrompt);
     setIsSearching(true);
 
     try {
       const result = await analyzePrompt(searchPrompt);
       if (result) {
-        console.log('✅ AI search successful:', result);
-
         // Show smart feedback based on search results
         let feedbackMessage = result.explanation;
         const totalFound = result.totalFound ?? result.events?.length ?? 0;

@@ -18,8 +18,6 @@ export const useAISearch = () => {
 
     setIsAnalyzing(true);
     try {
-      console.log('🧠 Analyzing prompt:', prompt);
-
       let result: AISearchResult;
 
       if (USE_MOCK_AI) {
@@ -43,12 +41,6 @@ export const useAISearch = () => {
 
         result = await response.json();
       }
-
-      console.log('✅ AI search completed:', {
-        totalFound: result.totalFound,
-        categories: result.categories,
-        keywords: result.keywords,
-      });
 
       toast.success('🧠 Smart AI Search', {
         description: result.explanation,
