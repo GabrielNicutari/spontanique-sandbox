@@ -37,10 +37,14 @@ This solution completes **Option A** (gaming/quiz event search relevance) while 
 
 **Test Query: "games"**
 ```
-BEFORE:
-#1. Classical Music at Tivoli    Score: 100 pts  ← Venue bonus only!
-#2. Wine Tasting at Tivoli       Score: 100 pts  ← Venue bonus only!
-#7. E-Sports Tournament          Score: 73 pts   ← Actual gaming event
+BEFORE (Baseline - commit 9910178):
+#1. Shakespeare Play at Royal Danish Theatre  122 pts  ← Venue bug!
+#2. Classical Music Evening at Tivoli         117 pts  ← Venue bug!
+#3. Wine Tasting Experience at Tivoli         115 pts  ← Venue bug!
+#4. Jazz Brunch at Tivoli                     111 pts  ← Venue bug!
+#5. Silent Disco in the Park                  110 pts
+
+E-Sports Gaming Tournament: NOT in top 5!
 ```
 
 ### Root Causes Identified
@@ -151,9 +155,9 @@ const weight = COMMON_WORDS.has(lower) ? 15 : 50; // 0.3x for common words
 **Problem**: Too many tangentially related events due to synonym expansion.
 
 **Solution**: Dramatically reduced synonym match weights:
-- Title synonyms: **50pts → 2-5pts** (90% reduction)
-- Category synonyms: **30pts → 2-6pts** (80% reduction)
-- Description synonyms: **20pts → 1-3pts** (85% reduction)
+- Title synonyms: **15pts → 2-5pts** (87% reduction)
+- Category synonyms: **12pts → 2-6pts** (83% reduction)
+- Description synonyms: **8pts → 1-3pts** (88% reduction)
 
 **Impact**: Prevents "synonym pollution" - only truly relevant events rank high.
 
