@@ -52,12 +52,16 @@ export const AISearchBar = ({
 
         // Show smart feedback based on search results
         let feedbackMessage = result.explanation;
-        if (result.totalFound === 0) {
+        const totalFound = result.totalFound ?? result.events?.length ?? 0;
+        const tier1Count = result.events?.filter((e: any) => e._tier === 1).length ?? 0;
+        const allResultsAreTier1 = totalFound > 0 && tier1Count === totalFound;
+
+        if (totalFound === 0) {
           feedbackMessage = `No events found for "${searchPrompt}". Try adjusting your search or check back later!`;
-        } else if (result.totalFound > 0 && result.totalFound <= 3) {
-          feedbackMessage = `Found ${result.totalFound} perfect match${result.totalFound > 1 ? 'es' : ''} for "${searchPrompt}"`;
-        } else if (result.totalFound > 20) {
-          feedbackMessage = `Found ${result.totalFound} events! Showing the most relevant ones first.`;
+        } else if (allResultsAreTier1 && totalFound <= 3) {
+          feedbackMessage = `Found ${totalFound} perfect match${totalFound > 1 ? 'es' : ''} for "${searchPrompt}"`;
+        } else if (totalFound > 20) {
+          feedbackMessage = `Found ${totalFound} events! Showing the most relevant ones first.`;
         }
 
         setLastExplanation(feedbackMessage);
